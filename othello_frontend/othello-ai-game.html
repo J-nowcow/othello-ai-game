@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오델로 AI 대전</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="othello-ai-style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 오델로 AI 대전</h1>
+            <p class="subtitle">고급 AI와 맞대결하세요!</p>
+        </header>
+
+        <div class="game-controls">
+            <div class="control-group">
+                <label for="ai-difficulty">AI 난이도:</label>
+                <select id="ai-difficulty" disabled>
+                    <option value="expert" selected>전문가</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="ai-color">AI 색상:</label>
+                <select id="ai-color">
+                    <option value="white" selected>백돌 (AI가 백돌)</option>
+                    <option value="black">흑돌 (AI가 흑돌)</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <button id="new-game-btn" class="btn primary">새 게임</button>
+                <button id="undo-btn" class="btn">되돌리기</button>
+                <button id="redo-btn" class="btn">앞으로</button>
+            </div>
+            
+            <div class="control-group ai-version-selector">
+                <label for="ai-version">🤖 AI 버전 선택:</label>
+                <select id="ai-version" class="ai-version-select">
+                    <option value="v1">📚 버전 1 (기존 전략)</option>
+                    <option value="v2" selected>🚀 버전 2 (논문 기반 최신)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="game-info">
+            <div class="score-board">
+                <div class="player black">
+                    <span class="stone">⚫</span>
+                    <span class="label">흑돌 (당신)</span>
+                    <span class="count" id="black-count">2</span>
+                </div>
+                <div class="vs">VS</div>
+                <div class="player white">
+                    <span class="stone">⚪</span>
+                    <span class="label">백돌 (AI)</span>
+                    <span class="count" id="white-count">2</span>
+                </div>
+            </div>
+            
+            <div class="game-status">
+                <div id="current-turn">흑돌 차례</div>
+                <div id="game-status">게임을 시작하세요!</div>
+                <div id="ai-thinking" class="hidden">🤖 AI가 생각 중...</div>
+            </div>
+        </div>
+
+        <div class="game-board-container">
+            <div id="othello-board" class="othello-board"></div>
+            
+            <div class="board-info">
+                <div class="coordinate-system">
+                    <div class="row-labels">
+                        <span>1</span><span>2</span><span>3</span><span>4</span>
+                        <span>5</span><span>6</span><span>7</span><span>8</span>
+                    </div>
+                    <div class="col-labels">
+                        <span>A</span><span>B</span><span>C</span><span>D</span>
+                        <span>E</span><span>F</span><span>G</span><span>H</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-details">
+            <div class="moves-section">
+                <h3>기보 (수순)</h3>
+                <div class="moves-controls">
+                    <button id="copy-moves-btn" class="btn small">기보 복사</button>
+                    <button id="first-btn" class="btn small">처음으로</button>
+                </div>
+                <div id="moves-list" class="moves-list"></div>
+            </div>
+            
+            <div class="ai-info">
+                <h3>AI 정보</h3>
+                <div class="info-item">
+                    <span class="label">현재 단계:</span>
+                    <span id="ai-phase">오프닝</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">남은 칸:</span>
+                    <span id="remaining-squares">60</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">AI 사고 시간:</span>
+                    <span id="ai-time">0ms</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">시뮬레이션:</span>
+                    <span id="simulation-count">1000</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-tips">
+            <h3>🎯 게임 팁</h3>
+            <ul>
+                <li><strong>모서리</strong>를 차지하면 안정적인 돌을 확보할 수 있습니다</li>
+                <li><strong>가장자리</strong>는 상대방이 뒤집기 어려운 위치입니다</li>
+                <li>AI는 상대방의 <strong>기동성을 제한</strong>하는 수를 선호합니다</li>
+                <li>마지막 12칸에서는 AI가 <strong>완벽한 수</strong>를 둡니다</li>
+            </ul>
+        </div>
+    </div>
+
+    <style>
+        .ai-version-selector {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .ai-version-selector label {
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .ai-version-select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-version-select:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        .ai-version-select:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.5);
+        }
+    </style>
+    
+    <script src="othello-ai.js"></script>
+    <script src="othello-ai-v2-core.js"></script>
+    <script src="othello-ai-game.js"></script>
+</body>
+</html>

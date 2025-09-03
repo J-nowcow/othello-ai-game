@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <title>오델로 게임</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 게임 모드 선택 UI -->
+        <div class="game-mode-selection" id="game-mode-selection">
+            <h2>오델로 게임</h2>
+            <div class="mode-buttons">
+                <button class="mode-btn" data-mode="1player">
+                    <span class="mode-icon">👤</span>
+                    <span class="mode-text">1 플레이어</span>
+                    <span class="mode-desc">AI와 대전</span>
+                </button>
+                <button class="mode-btn" data-mode="2player">
+                    <span class="mode-icon">👥</span>
+                    <span class="mode-text">2 플레이어</span>
+                    <span class="mode-desc">사람끼리 대전</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- AI 색상 선택 UI (1플레이어 모드에서만 표시) -->
+        <div class="ai-color-selection" id="ai-color-selection" style="display: none;">
+            <h3>AI 색상 선택</h3>
+            <p>어떤 색으로 플레이하시겠습니까?</p>
+            <div class="color-buttons">
+                <button class="color-btn" data-color="black">
+                    <span class="color-icon">⚫</span>
+                    <span>흑돌 (선공)</span>
+                </button>
+                <button class="color-btn" data-color="white">
+                    <span class="color-icon">⚪</span>
+                    <span>백돌 (후공)</span>
+                </button>
+            </div>
+            <button class="back-btn" id="back-to-mode">← 모드 선택으로 돌아가기</button>
+        </div>
+
+        <!-- 게임 UI (게임 시작 후에만 표시) -->
+        <div class="game-ui" id="game-ui" style="display: none;">
+            <!-- 상단 플레이어 바 -->
+            <div class="player-header">
+                <div class="player-row">
+                    <span id="black-count" class="badge black">2</span>
+                    <span class="player-name">흑돌 (Black)</span>
+                </div>
+                
+                <div class="player-row right">
+                    <span class="player-name">백돌 (White)</span>
+                    <span id="white-count" class="badge white">2</span>
+                </div>
+            </div>
+
+            <!-- 현재 차례 표시 -->
+            <div class="current-turn-display" id="current-turn">
+                <span>흑돌 차례</span>
+            </div>
+
+            <!-- 게임 보드 -->
+            <div class="game-board">
+                <div class="board-container">
+                    <!-- 좌표 라벨 -->
+                    <div class="coordinate-labels">
+                        <div class="x-labels">
+                            <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span>
+                        </div>
+                        <div class="y-labels">
+                            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 오델로 보드 -->
+                    <div class="othello-board" id="othello-board">
+                        <!-- 보드 셀들이 JavaScript로 생성됩니다 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 게임 컨트롤 -->
+            <div class="game-controls">
+                <div class="control-strip">
+                    <!-- 좌측: 탐색 -->
+                    <button id="first-btn" class="control-btn icon" title="처음으로">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M18.41 7.41L17 6l-6 6 6 6 1.41-1.41L13.83 12zM6 6h2v12H6z"/>
+                        </svg>
+                    </button>
+                    <button id="undo-btn" class="control-btn icon" title="되돌리기" disabled>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+                        </svg>
+                    </button>
+                    
+                    <!-- 중앙: 새 게임 -->
+                    <button id="new-game-btn" class="control-btn primary">새 게임</button>
+                    
+                    <!-- 우측: 분석 -->
+                    <button id="analyze-btn" class="control-btn icon-toggle" title="분석 모드">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="4" y="10" width="3" height="8" rx="1" />
+                            <rect x="10" y="6"  width="3" height="12" rx="1" />
+                            <rect x="16" y="13" width="3" height="5" rx="1" />
+                        </svg>
+                    </button>
+                    <button id="info-btn" class="control-btn icon" title="게임 정보">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 게임 상태 표시 -->
+            <div class="game-status" id="game-status">
+                <p>게임을 시작하려면 새 게임 버튼을 클릭하세요.</p>
+            </div>
+
+            <!-- 기보 표시 -->
+            <div class="game-moves">
+                <div class="moves-header">
+                    <h3>기보</h3>
+                    <div class="moves-buttons">
+                        <button id="copy-moves-btn" class="control-btn secondary" title="기보 복사하기">기보 복사</button>
+                    </div>
+                </div>
+                <div class="moves-container" id="moves-container">
+                    <div class="moves-list" id="moves-list">
+                        <!-- 기보가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 게임 규칙 도움말 -->
+            <div class="game-help">
+                <details>
+                    <summary>게임 규칙 보기</summary>
+                    <div class="help-content">
+                        <h3>오델로 게임 규칙</h3>
+                        <ul>
+                            <li>흑돌이 먼저 시작합니다</li>
+                            <li>상대방 돌을 감싸는 위치에 돌을 놓아야 합니다</li>
+                            <li>감싸진 상대방 돌은 모두 뒤집힙니다</li>
+                            <li><strong>유효한 수가 있으면 반드시 돌을 놓아야 합니다</strong></li>
+                            <li>가능한 수가 없으면 강제로 패스됩니다</li>
+                            <li>게임이 끝나면 돌이 많은 쪽이 승리합니다</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
