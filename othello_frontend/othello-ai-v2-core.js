@@ -152,14 +152,24 @@ class OthelloAI_v2 {
         let bestMove = validMoves[0];
         let bestScore = -Infinity;
         
+        // 시작 시간과 타임아웃 설정
+        const startTime = Date.now();
+        const timeLimit = 5000; // 5초
+        
         // Move Ordering으로 수를 정렬
         if (this.performance.moveOrdering) {
             validMoves = this.orderMoves(board, validMoves, player);
         }
         
         for (const move of validMoves) {
+            // 시간 제한 체크
+            if (Date.now() - startTime > timeLimit) {
+                console.log('getAdvancedMove: 시간 제한 초과! 현재까지의 최선의 수를 반환합니다.');
+                break;
+            }
+            
             const newBoard = this.makeMove(board, player, move);
-            const score = this.alphaBeta(newBoard, this.performance.maxDepth - 1, false, player, opponent, -Infinity, Infinity);
+            const score = this.alphaBeta(newBoard, this.performance.maxDepth - 1, false, player, opponent, -Infinity, Infinity, startTime, timeLimit);
             
             if (score > bestScore) {
                 bestScore = score;
