@@ -221,46 +221,87 @@ class OthelloGame {
         }
     }
 
-    // AI 수 두기 (버전 2 AI 사용)
+    // AI 수 두기 (Web Worker + 타임아웃 사용)
     makeAIMove() {
         if (this.gameOver || this.currentPlayer !== this.aiColor) return;
 
         console.log('AI 차례입니다. AI 색상:', this.aiColor);
         console.log('유효한 수들:', this.validMoves);
 
-        // 버전 2 AI 사용
-        if (typeof window.OthelloAI_v2 !== 'undefined') {
-            console.log('OthelloAI_v2 클래스를 찾았습니다!');
+        // Web Worker를 사용한 AI 계산
+        this.runAIWithWorker();
+    }
+
+    /**
+     * Web Worker를 사용한 AI 계산
+     */
+    runAIWithWorker() {
+        try {
+            // AI Worker 생성
+            const aiWorker = new Worker('ai-worker.js');
             
-            try {
-                // AI 인스턴스 생성 (난이도: expert)
-                const ai = new window.OthelloAI_v2('expert');
-                console.log('AI 인스턴스 생성 성공');
+            // 시작 시간 기록
+            const startTime = Date.now();
+            const timeLimit = 5000; // 5초
+            
+            // 타임아웃 설정
+            const timeoutId = setTimeout(() => {
+                console.log('5초 타임아웃! Worker 종료 및 fallback 사용');
+                aiWorker.terminate();
+                this.useFallbackAI();
+            }, timeLimit);
+            
+            // Worker에 데이터 전송
+            const boardForAI = this.convertBoardForAI();
+            aiWorker.postMessage({
+                board: boardForAI,
+                player: this.aiColor,
+                validMoves: this.validMoves,
+                timeLimit: timeLimit
+            });
+            
+            // Worker로부터 결과 수신
+            aiWorker.onmessage = (e) => {
+                clearTimeout(timeoutId);
+                aiWorker.terminate();
                 
-                // 현재 보드 상태를 AI가 이해할 수 있는 형태로 변환
-                const boardForAI = this.convertBoardForAI();
-                console.log('보드 변환 완료:', boardForAI);
+                const { success, move, error, timeTaken, fallbackMove } = e.data;
                 
-                // AI가 다음 수를 결정
-                const aiMove = ai.getNextMove(boardForAI, this.aiColor, this.validMoves);
-                console.log('AI가 선택한 수:', aiMove);
-                
-                if (aiMove && this.validMoves.some(move => move[0] === aiMove[0] && move[1] === aiMove[1])) {
-                    // AI가 선택한 수가 유효한 경우
-                    console.log('AI 수를 둡니다:', aiMove);
-                    this.makeMove(aiMove[0], aiMove[1]);
-                    return;
+                if (success && move) {
+                    console.log(`AI 계산 완료! 소요시간: ${timeTaken}ms, 선택된 수:`, move);
+                    
+                    if (this.validMoves.some(m => m[0] === move[0] && m[1] === move[1])) {
+                        this.makeMove(move[0], move[1]);
+                        return;
+                    }
                 } else {
-                    console.log('AI가 선택한 수가 유효하지 않습니다. fallback 사용');
+                    console.log('AI 계산 실패:', error);
                 }
-            } catch (error) {
-                console.error('AI 실행 중 오류 발생:', error);
-            }
-        } else {
-            console.log('OthelloAI_v2 클래스를 찾을 수 없습니다. 랜덤 AI 사용');
+                
+                // fallback 사용
+                this.useFallbackAI();
+            };
+            
+            // Worker 오류 처리
+            aiWorker.onerror = (error) => {
+                clearTimeout(timeoutId);
+                aiWorker.terminate();
+                console.error('AI Worker 오류:', error);
+                this.useFallbackAI();
+            };
+            
+        } catch (error) {
+            console.error('Web Worker 생성 실패:', error);
+            this.useFallbackAI();
         }
+    }
+
+    /**
+     * Fallback AI (랜덤 + 간단한 전략)
+     */
+    useFallbackAI() {
+        console.log('Fallback AI 사용 (랜덤 + 간단한 전략)');
         
-        // AI가 작동하지 않는 경우 기존 랜덤 로직 사용
         if (this.validMoves.length === 0) {
             // AI가 수를 둘 수 없음 - 패스
             this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
@@ -270,13 +311,36 @@ class OthelloGame {
             return;
         }
 
-        // 랜덤으로 유효한 수 선택 (fallback)
-        const randomIndex = Math.floor(Math.random() * this.validMoves.length);
-        const [row, col] = this.validMoves[randomIndex];
+        // 간단한 전략: 구석 우선, 가장자리 회피
+        let bestMove = this.validMoves[0];
+        let bestScore = -Infinity;
         
-        console.log('랜덤 AI 수를 둡니다:', [row, col]);
-        // AI 수 두기
-        this.makeMove(row, col);
+        for (const move of this.validMoves) {
+            const [row, col] = move;
+            let score = 0;
+            
+            // 구석이면 높은 점수
+            if ((row === 0 || row === 7) && (col === 0 || col === 7)) {
+                score += 1000;
+            }
+            // 가장자리 중간은 낮은 점수
+            else if ((row === 0 || row === 7 || col === 0 || col === 7) && 
+                     !((row === 0 || row === 7) && (col === 0 || col === 7))) {
+                score -= 500;
+            }
+            // 중앙은 보통 점수
+            else {
+                score += 100;
+            }
+            
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = move;
+            }
+        }
+        
+        console.log('Fallback AI가 선택한 수:', bestMove);
+        this.makeMove(bestMove[0], bestMove[1]);
     }
 
     /**
