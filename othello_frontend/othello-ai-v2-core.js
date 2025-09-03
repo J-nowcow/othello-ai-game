@@ -999,7 +999,7 @@ class OthelloAI_v2 {
         // 구석 근처에 있는 수인지 확인
         const corners = [[0,0], [0,7], [7,0], [7,7]];
         for (const [cornerRow, cornerCol] of corners) {
-            if (this.canReachCorner_v2(board, move, player, cornerRow, cornerCol)) {
+            if (this.canReachCorner_v2(board, row, col, player, cornerRow, cornerCol)) {
                 score += 200; // 구석 확보 가능성은 매우 높은 점수
             }
         }
@@ -1023,20 +1023,30 @@ class OthelloAI_v2 {
     }
 
     /**
-     * 특정 구석에 도달할 수 있는지 확인 (v1 AI 로직 통합)
+     * 특정 위치에서 구석에 도달할 수 있는지 확인 (v1 AI 로직 통합)
      */
-    canReachCorner_v2(board, move, player, cornerRow, cornerCol) {
-        const [row, col] = move;
+    canReachCorner_v2(board, row, col, player) {
+        const opponent = player === 'black' ? 'white' : 'black';
         
-        // 구석과의 거리 계산
-        const rowDistance = Math.abs(row - cornerRow);
-        const colDistance = Math.abs(col - cornerCol);
+        // 배열 경계 검사
+        if (!board || !board[row] || row < 0 || row >= 8 || col < 0 || col >= 8) {
+            return false;
+        }
         
-        // 구석 근처에 있고, 구석까지의 경로가 열려있는지 확인
-        if (rowDistance <= 2 && colDistance <= 2) {
-            // 구석까지의 경로에 상대방 돌이 있는지 확인
-            const pathOpen = this.isPathToCornerOpen_v2(board, row, col, cornerRow, cornerCol, player);
-            return pathOpen;
+        // 구석 위치들
+        const corners = [[0,0], [0,7], [7,0], [7,7]];
+        
+        for (const [cornerRow, cornerCol] of corners) {
+            // 구석과의 거리 계산
+            const rowDistance = Math.abs(row - cornerRow);
+            const colDistance = Math.abs(col - cornerCol);
+            
+            // 구석 근처에 있고, 구석까지의 경로가 열려있는지 확인
+            if (rowDistance <= 2 && colDistance <= 2) {
+                // 구석까지의 경로에 상대방 돌이 있는지 확인
+                const pathOpen = this.isPathToCornerOpen_v2(board, row, col, cornerRow, cornerCol, player);
+                return pathOpen;
+            }
         }
         
         return false;
@@ -1048,6 +1058,11 @@ class OthelloAI_v2 {
     isPathToCornerOpen_v2(board, startRow, startCol, cornerRow, cornerCol, player) {
         const opponent = player === 'black' ? 'white' : 'black';
         
+        // 배열 경계 검사
+        if (!board || !board[startRow] || !board[cornerRow]) {
+            return false;
+        }
+        
         // 시작점에서 구석까지의 방향 계산
         const dr = cornerRow > startRow ? 1 : cornerRow < startRow ? -1 : 0;
         const dc = cornerCol > startCol ? 1 : cornerCol < startCol ? -1 : 0;
@@ -1057,9 +1072,15 @@ class OthelloAI_v2 {
         
         // 구석까지 경로 확인
         while (currentRow !== cornerRow || currentCol !== cornerCol) {
-            if (board[currentRow][currentCol] === opponent) {
+            // 배열 경계 검사
+            if (currentRow < 0 || currentRow >= 8 || currentCol < 0 || currentCol >= 8) {
+                return false;
+            }
+            
+            if (!board[currentRow] || board[currentRow][currentCol] === opponent) {
                 return false; // 경로가 막혀있음
             }
+            
             currentRow += dr;
             currentCol += dc;
         }
