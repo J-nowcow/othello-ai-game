@@ -225,22 +225,39 @@ class OthelloGame {
     makeAIMove() {
         if (this.gameOver || this.currentPlayer !== this.aiColor) return;
 
+        console.log('AI 차례입니다. AI 색상:', this.aiColor);
+        console.log('유효한 수들:', this.validMoves);
+
         // 버전 2 AI 사용
-        if (typeof OthelloAI_v2 !== 'undefined') {
-            // AI 인스턴스 생성 (난이도: expert)
-            const ai = new OthelloAI_v2('expert');
+        if (typeof window.OthelloAI_v2 !== 'undefined') {
+            console.log('OthelloAI_v2 클래스를 찾았습니다!');
             
-            // 현재 보드 상태를 AI가 이해할 수 있는 형태로 변환
-            const boardForAI = this.convertBoardForAI();
-            
-            // AI가 다음 수를 결정
-            const aiMove = ai.getNextMove(boardForAI, this.aiColor, this.validMoves);
-            
-            if (aiMove && this.validMoves.some(move => move[0] === aiMove[0] && move[1] === aiMove[1])) {
-                // AI가 선택한 수가 유효한 경우
-                this.makeMove(aiMove[0], aiMove[1]);
-                return;
+            try {
+                // AI 인스턴스 생성 (난이도: expert)
+                const ai = new window.OthelloAI_v2('expert');
+                console.log('AI 인스턴스 생성 성공');
+                
+                // 현재 보드 상태를 AI가 이해할 수 있는 형태로 변환
+                const boardForAI = this.convertBoardForAI();
+                console.log('보드 변환 완료:', boardForAI);
+                
+                // AI가 다음 수를 결정
+                const aiMove = ai.getNextMove(boardForAI, this.aiColor, this.validMoves);
+                console.log('AI가 선택한 수:', aiMove);
+                
+                if (aiMove && this.validMoves.some(move => move[0] === aiMove[0] && move[1] === aiMove[1])) {
+                    // AI가 선택한 수가 유효한 경우
+                    console.log('AI 수를 둡니다:', aiMove);
+                    this.makeMove(aiMove[0], aiMove[1]);
+                    return;
+                } else {
+                    console.log('AI가 선택한 수가 유효하지 않습니다. fallback 사용');
+                }
+            } catch (error) {
+                console.error('AI 실행 중 오류 발생:', error);
             }
+        } else {
+            console.log('OthelloAI_v2 클래스를 찾을 수 없습니다. 랜덤 AI 사용');
         }
         
         // AI가 작동하지 않는 경우 기존 랜덤 로직 사용
@@ -257,6 +274,7 @@ class OthelloGame {
         const randomIndex = Math.floor(Math.random() * this.validMoves.length);
         const [row, col] = this.validMoves[randomIndex];
         
+        console.log('랜덤 AI 수를 둡니다:', [row, col]);
         // AI 수 두기
         this.makeMove(row, col);
     }

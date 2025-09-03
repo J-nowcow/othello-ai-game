@@ -1237,3 +1237,8 @@ class OthelloAI_v2 {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = OthelloAI_v2;
 }
+
+// 브라우저에서 전역으로 사용할 수 있도록 window 객체에 추가
+if (typeof window !== 'undefined') {
+    window.OthelloAI_v2 = OthelloAI_v2;
+}
