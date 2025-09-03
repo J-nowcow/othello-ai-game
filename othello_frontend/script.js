@@ -265,10 +265,17 @@ class OthelloGame {
                 clearTimeout(timeoutId);
                 aiWorker.terminate();
                 
-                const { success, move, error, timeTaken, fallbackMove } = e.data;
+                const { success, move, score, movesEvaluated, totalMoves, timeTaken, timeoutOccurred, error, fallbackMove } = e.data;
                 
                 if (success && move) {
-                    console.log(`AI 계산 완료! 소요시간: ${timeTaken}ms, 선택된 수:`, move);
+                    if (timeoutOccurred) {
+                        console.log(`⏰ 타임아웃 발생! ${movesEvaluated}/${totalMoves} 수 평가 완료`);
+                        console.log(`현재까지의 최선의 수: ${move} (점수: ${score})`);
+                    } else {
+                        console.log(`✅ AI 계산 완료! ${movesEvaluated}/${totalMoves} 수 평가`);
+                        console.log(`선택된 수: ${move} (점수: ${score})`);
+                    }
+                    console.log(`소요시간: ${timeTaken}ms`);
                     
                     if (this.validMoves.some(m => m[0] === move[0] && m[1] === move[1])) {
                         this.makeMove(move[0], move[1]);
@@ -297,10 +304,10 @@ class OthelloGame {
     }
 
     /**
-     * Fallback AI (랜덤 + 간단한 전략)
+     * Fallback AI (전략적 선택 + 랜덤)
      */
     useFallbackAI() {
-        console.log('Fallback AI 사용 (랜덤 + 간단한 전략)');
+        console.log('Fallback AI 사용 (전략적 선택)');
         
         if (this.validMoves.length === 0) {
             // AI가 수를 둘 수 없음 - 패스
@@ -311,7 +318,7 @@ class OthelloGame {
             return;
         }
 
-        // 간단한 전략: 구석 우선, 가장자리 회피
+        // 전략적 점수 계산
         let bestMove = this.validMoves[0];
         let bestScore = -Infinity;
         
@@ -319,18 +326,39 @@ class OthelloGame {
             const [row, col] = move;
             let score = 0;
             
-            // 구석이면 높은 점수
+            // 1. 구석 우선 (가장 높은 점수)
             if ((row === 0 || row === 7) && (col === 0 || col === 7)) {
-                score += 1000;
+                score += 10000;
             }
-            // 가장자리 중간은 낮은 점수
+            // 2. 구석 근처 안전한 위치
+            else if ((row === 1 || row === 6) && (col === 1 || col === 6)) {
+                if (this.isCornerSafe(this.board, row, col, this.aiColor)) {
+                    score += 5000;
+                } else {
+                    score -= 2000; // 위험한 위치
+                }
+            }
+            // 3. 가장자리 중간 (위험한 위치)
             else if ((row === 0 || row === 7 || col === 0 || col === 7) && 
                      !((row === 0 || row === 7) && (col === 0 || col === 7))) {
-                score -= 500;
+                score -= 3000;
             }
-            // 중앙은 보통 점수
+            // 4. 중앙 영역 (안전한 위치)
+            else if (row >= 2 && row <= 5 && col >= 2 && col <= 5) {
+                score += 2000;
+            }
+            // 5. 중간 영역
             else {
-                score += 100;
+                score += 1000;
+            }
+            
+            // 6. 뒤집는 돌 개수 고려
+            const captures = this.countCaptures(this.board, move, this.aiColor);
+            score += captures * 100;
+            
+            // 7. 상대방이 다음에 구석을 얻을 수 있는지 체크
+            if (this.wouldGiveCornerToOpponent(move)) {
+                score -= 5000;
             }
             
             if (score > bestScore) {
@@ -339,8 +367,91 @@ class OthelloGame {
             }
         }
         
-        console.log('Fallback AI가 선택한 수:', bestMove);
+        console.log(`Fallback AI 선택: ${bestMove} (점수: ${bestScore})`);
         this.makeMove(bestMove[0], bestMove[1]);
+    }
+
+    /**
+     * 구석이 안전한지 확인
+     */
+    isCornerSafe(board, row, col, player) {
+        const opponent = player === 'black' ? 'white' : 'black';
+        
+        // 구석 근처에 상대방 돌이 있으면 위험
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                
+                const newRow = row + dr;
+                const newCol = col + dc;
+                
+                if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                    if (board[newRow][newCol] === opponent) {
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * 수를 놓았을 때 뒤집히는 돌 개수 계산
+     */
+    countCaptures(board, move, player) {
+        const [row, col] = move;
+        let totalCaptures = 0;
+        
+        const directions = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1],  [1, 0],  [1, 1]
+        ];
+
+        for (const [dr, dc] of directions) {
+            let captures = 0;
+            let currentRow = row + dr;
+            let currentCol = col + dc;
+            
+            while (currentRow >= 0 && currentRow < 8 && currentCol >= 0 && currentCol < 8) {
+                if (board[currentRow][currentCol] === null) break;
+                if (board[currentRow][currentCol] === player) {
+                    totalCaptures += captures;
+                    break;
+                }
+                captures++;
+                currentRow += dr;
+                currentCol += dc;
+            }
+        }
+        
+        return totalCaptures;
+    }
+
+    /**
+     * 이 수를 놓으면 상대방이 구석을 얻을 수 있는지 확인
+     */
+    wouldGiveCornerToOpponent(move) {
+        const [row, col] = move;
+        const opponent = this.aiColor === 'black' ? 'white' : 'black';
+        
+        // 가상으로 수를 놓아보기
+        const testBoard = JSON.parse(JSON.stringify(this.board));
+        testBoard[row][col] = this.aiColor;
+        
+        // 상대방이 구석에 수를 놓을 수 있는지 확인
+        const corners = [[0,0], [0,7], [7,0], [7,7]];
+        for (const [cornerRow, cornerCol] of corners) {
+            if (testBoard[cornerRow][cornerCol] === null) {
+                // 상대방이 이 구석에 수를 놓을 수 있는지 체크
+                if (this.isValidMove(testBoard, opponent, cornerRow, cornerCol)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
 
     /**
