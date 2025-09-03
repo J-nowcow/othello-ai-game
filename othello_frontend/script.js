@@ -221,13 +221,29 @@ class OthelloGame {
         }
     }
 
-    // AI 수 두기 (랜덤)
+    // AI 수 두기 (버전 2 AI 사용)
     makeAIMove() {
         if (this.gameOver || this.currentPlayer !== this.aiColor) return;
 
-        // TODO: 나중에 더 똑똑한 AI 알고리즘으로 교체할 예정
-        // 현재는 랜덤으로 유효한 수 중에서 하나를 선택
+        // 버전 2 AI 사용
+        if (typeof OthelloAI_v2 !== 'undefined') {
+            // AI 인스턴스 생성 (난이도: expert)
+            const ai = new OthelloAI_v2('expert');
+            
+            // 현재 보드 상태를 AI가 이해할 수 있는 형태로 변환
+            const boardForAI = this.convertBoardForAI();
+            
+            // AI가 다음 수를 결정
+            const aiMove = ai.getNextMove(boardForAI, this.aiColor, this.validMoves);
+            
+            if (aiMove && this.validMoves.some(move => move[0] === aiMove[0] && move[1] === aiMove[1])) {
+                // AI가 선택한 수가 유효한 경우
+                this.makeMove(aiMove[0], aiMove[1]);
+                return;
+            }
+        }
         
+        // AI가 작동하지 않는 경우 기존 랜덤 로직 사용
         if (this.validMoves.length === 0) {
             // AI가 수를 둘 수 없음 - 패스
             this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
@@ -237,12 +253,33 @@ class OthelloGame {
             return;
         }
 
-        // 랜덤으로 유효한 수 선택
+        // 랜덤으로 유효한 수 선택 (fallback)
         const randomIndex = Math.floor(Math.random() * this.validMoves.length);
         const [row, col] = this.validMoves[randomIndex];
         
         // AI 수 두기
         this.makeMove(row, col);
+    }
+
+    /**
+     * 보드를 AI가 이해할 수 있는 형태로 변환
+     */
+    convertBoardForAI() {
+        const boardForAI = [];
+        for (let row = 0; row < 8; row++) {
+            boardForAI[row] = [];
+            for (let col = 0; col < 8; col++) {
+                const cell = this.board[row][col];
+                if (cell === null) {
+                    boardForAI[row][col] = null;
+                } else if (cell === 'black') {
+                    boardForAI[row][col] = 'black';
+                } else {
+                    boardForAI[row][col] = 'white';
+                }
+            }
+        }
+        return boardForAI;
     }
 
     // 기보에 수 추가
