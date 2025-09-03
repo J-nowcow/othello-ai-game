@@ -10,7 +10,12 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.4.0"
   },
-  "keywords": ["othello", "mcp", "wpc", "ai"],
+  "keywords": [
+    "othello",
+    "mcp",
+    "wpc",
+    "ai"
+  ],
   "author": "Your Name",
   "license": "MIT"
 }
